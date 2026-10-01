@@ -85,7 +85,7 @@ test("planRequest maps outcomes to the draft's status codes", () => {
 
   const busy = planRequest(store, { ...base, rawKey: '"k1"', now: 1 });
   assert.equal(busy.response.status, 409);
-  assert.equal(busy.response.headers["retry-after"], "30");
+  assert.equal(busy.response.headers["retry-after"], "1");
 
   const reused = planRequest(store, { ...base, rawKey: '"k1"', fingerprint: "other" });
   assert.equal(reused.response.status, 422);

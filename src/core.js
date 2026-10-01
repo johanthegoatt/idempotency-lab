@@ -171,10 +171,11 @@ export function planRequest(store, { rawKey, fingerprint, scope = "", now, requi
       return { action: "respond", response: problem(422, "key-reused", "Idempotency-Key is already used",
         "This key was already used with a different request payload. Use a new key for a new request.") };
     case "in-flight": {
-      const seconds = Math.max(1, Math.ceil(outcome.retryAfterMs / 1000));
+      // The lease only bounds the worst case; a healthy request finishes far
+      // sooner. One second is the smallest wait Retry-After can express.
       return { action: "respond", response: problem(409, "in-flight", "A request is outstanding for this Idempotency-Key",
         "The first request with this key has not finished. Retry after it completes.",
-        { "retry-after": String(seconds) }) };
+        { "retry-after": "1" }) };
     }
     case "replay": {
       const saved = outcome.response;
