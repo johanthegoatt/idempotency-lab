@@ -1,0 +1,12 @@
+{
+  "name": "idempotency-lab",
+  "version": "0.1.0",
+  "description": "An Idempotency-Key middleware for node:http built to the IETF draft, and a simulator that shows what retries do to a payments API with and without it.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.js"
+  }
+}
