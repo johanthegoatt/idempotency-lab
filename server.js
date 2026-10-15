@@ -14,7 +14,12 @@ const port = Number(process.env.PORT) || 8788;
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 const publicFiles = new Set(["/index.html", "/src/core.js", "/src/sim.js", "/src/console.js", "/src/style.css"]);
 
-const idempotency = createIdempotency({ store: createStore() });
+// IDEMPOTENCY_DB=keys.db keeps keys in SQLite, so they survive a restart and
+// can be shared by several server processes on one host.
+const store = process.env.IDEMPOTENCY_DB
+  ? await (await import("./src/sqliteStore.js")).createSqliteStore({ path: process.env.IDEMPOTENCY_DB })
+  : createStore();
+const idempotency = createIdempotency({ store });
 let charges = 0;
 
 export const server = createServer(async (req, res) => {

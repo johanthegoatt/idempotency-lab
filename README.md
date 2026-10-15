@@ -7,8 +7,9 @@ and a seeded simulation that shows what client retries do to a payments API with
 Live: https://idempotency-lab.johanthegoat.xyz
 
 ```
-npm test        # 25 tests, no dependencies
+npm test        # no dependencies
 npm start       # http://localhost:8788, with a real /api/charges
+IDEMPOTENCY_DB=keys.db npm start   # same, keys kept in SQLite across restarts
 ```
 
 ## The problem
@@ -93,6 +94,15 @@ The store is in memory. For more than one process, the same `begin` / `complete`
 contract maps onto a database row with a unique key and a `locked_at` column, the design
 Brandur Leach describes in
 [Implementing Stripe-like Idempotency Keys in Postgres](https://brandur.org/idempotency-keys).
+
+### Keeping keys across restarts
+
+`createStore()` keeps keys in memory, so a restart, or a retry that lands on another process, forgets them. `createSqliteStore()` (Node 22.5+, built-in `node:sqlite`) has the same contract and keeps them in a file that several processes on one host can share; claiming a key runs in an `IMMEDIATE` transaction, so two processes can't both run the same request.
+
+```js
+import { createSqliteStore } from "./src/sqliteStore.js";
+const idem = createIdempotency({ store: await createSqliteStore({ path: "keys.db" }) });
+```
 
 ## The simulation
 
