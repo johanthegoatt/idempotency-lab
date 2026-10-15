@@ -119,3 +119,30 @@ test("GET is left alone and bodies over the limit are refused", async (t) => {
   const get = await fetch(app.url + "/charges");
   assert.equal(get.status, 201);
 });
+
+test("binary responses replay byte for byte", async () => {
+  const bytes = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff, 0xfe, 0x80, 0xc3, 0x28]);
+  let runs = 0;
+  const idem = createIdempotency({ store: createStore(), onError: () => {} });
+  const server = createServer((req, res) =>
+    idem(req, res, () => {
+      runs++;
+      res.setHeader("content-type", "application/pdf");
+      res.end(bytes);
+    }),
+  );
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const url = `http://127.0.0.1:${server.address().port}/receipts`;
+  const send = () => fetch(url, { method: "POST", headers: { "idempotency-key": '"r-1"' }, body: "{}" });
+  try {
+    const first = Buffer.from(await (await send()).arrayBuffer());
+    const again = await send();
+    const second = Buffer.from(await again.arrayBuffer());
+    assert.deepEqual(first, bytes);
+    assert.deepEqual(second, bytes);
+    assert.equal(again.headers.get("idempotent-replayed"), "true");
+    assert.equal(runs, 1);
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
+});

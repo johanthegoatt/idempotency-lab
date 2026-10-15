@@ -47,10 +47,10 @@ function readBody(req, limit) {
   });
 }
 
-function send(res, { status, headers, body }) {
+function send(res, { status, headers, body, encoding }) {
   res.statusCode = status;
   for (const [name, value] of Object.entries(headers ?? {})) res.setHeader(name, value);
-  res.end(body ?? "");
+  res.end(encoding === "base64" ? Buffer.from(body ?? "", "base64") : body ?? "");
 }
 
 export function createIdempotency({
@@ -112,8 +112,10 @@ export function createIdempotency({
       for (const [name, value] of Object.entries(res.getHeaders())) {
         if (!HOP_BY_HOP.has(name)) headers[name] = Array.isArray(value) ? value.join(", ") : String(value);
       }
-      const body = Buffer.concat(chunks).toString("utf8");
-      store.complete(plan.storeKey, plan.token, { status: res.statusCode, headers, body }, now());
+      // Saved as base64: a PDF or an image went through toString("utf8") and
+      // came back mangled on every replay.
+      const body = Buffer.concat(chunks).toString("base64");
+      store.complete(plan.storeKey, plan.token, { status: res.statusCode, headers, body, encoding: "base64" }, now());
     };
     const collect = (chunk, encoding) => {
       if (chunk != null && typeof chunk !== "function") {
